@@ -31,7 +31,7 @@ COLA::COLA(size_t initialCapacity) :
 	m_Size(0)
 {
 	// Capacity must be a power of two minus 1 (and greater than zero)
-	m_Capacity = (initialCapacity > 0) ? (ceilPO2(initialCapacity) - 1) : 15;
+	m_Capacity = initialCapacity ? static_cast<size_t>(ceilPO2(initialCapacity) - 1) : 15;
 	m_Data = new int64_t[m_Capacity];
 }
 
@@ -45,25 +45,24 @@ void COLA::add(int64_t value)
 	}
 
 	// Find first position of empty array (merge layer)
-	const uint32_t mIndex = (1 << getLSBIndex(nSize)) - 1;
-	const uint32_t mEnd = (mIndex << 1) + 1;
+	const uint32_t m = (1 << getLSBIndex(nSize)) - 1;
+	const uint32_t mEnd = (m << 1) + 1;
 
-	uint32_t count = 1;
-	m_Data[mEnd - count] = value;
+	m_Data[mEnd - 1] = value;
 
 	// Iteratively merge arrays
 	uint32_t i = 0;
-	while (i != mIndex)
+	while (i != m)
 	{
 		// Index after last element in current layer
-		uint32_t lEnd = i << 1;
+		uint32_t iEnd = (i << 1) + 1;
 		
 		// Index of first element in merging layer and new index
-		uint32_t j = mEnd - count;
-		uint32_t k = mEnd - (count << 1);
+		uint32_t j = mEnd - i - 1;
+		uint32_t k = mEnd - iEnd - 1;
 
 		// Simple merge sort (ascending order)
-		while (i != lEnd && j != mEnd)
+		while (i != iEnd && j != mEnd)
 		{
 			if (m_Data[i] < m_Data[j])
 				m_Data[k++] = m_Data[i++];
@@ -72,14 +71,8 @@ void COLA::add(int64_t value)
 		}
 
 		// Copy remaining elements in current layer
-		while (i < lEnd)
-			m_Data[j++] = m_Data[i++];
-
-		// Copy remaining elements in merging layer
-		while (j < mEnd)
-			m_Data[j++] = m_Data[i++];
-
-		count = count << 1;
+		while (i != iEnd)
+			m_Data[k++] = m_Data[i++];
 	}
 
 	m_Size = nSize;
