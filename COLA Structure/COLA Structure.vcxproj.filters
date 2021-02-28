@@ -26,5 +26,8 @@
     <ClInclude Include="src\structure\cola.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\structure\math_util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

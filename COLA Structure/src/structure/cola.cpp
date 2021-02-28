@@ -2,50 +2,36 @@
 
 #include <memory>
 
-static uint32_t ceilPO2(uint32_t x)
-{
-	x = x | (x >> 1);
-	x = x | (x >> 2);
-	x = x | (x >> 4);
-	x = x | (x >> 8);
-	x = x | (x >> 16);
-	return x + 1;
-}
-
-static uint32_t getLSBIndex(unsigned int v)
-{
-	// See http://graphics.stanford.edu/~seander/bithacks.html
-	static const uint32_t MultiplyDeBruijnBitPosition[32] =
-	{
-	  0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
-	  31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
-	};
-
-	// Find the number of trailing zeros in 32-bit v
-	return MultiplyDeBruijnBitPosition[((uint32_t)((v & (1 + ~v)) * 0x077CB531U)) >> 27];
-}
-
 COLA::COLA(size_t initialCapacity) :
 	m_Data(nullptr),
 	m_Capacity(0),
 	m_Size(0)
 {
 	// Capacity must be a power of two minus 1 (and greater than zero)
-	m_Capacity = initialCapacity ? static_cast<size_t>(ceilPO2(initialCapacity) - 1) : 15;
+	m_Capacity = initialCapacity ? static_cast<size_t>(nextPO2(initialCapacity) - 1) : 15;
 	m_Data = new int64_t[m_Capacity];
+}
+
+COLA::COLA(const COLA& other) :
+	m_Data(new int64_t[other.m_Capacity]),
+	m_Capacity(other.m_Capacity),
+	m_Size(other.m_Size)
+{
+	// Copy instead of pointing to the same memory.
+	memcpy(m_Data, other.m_Data, other.m_Capacity * sizeof(int64_t));
 }
 
 void COLA::add(int64_t value)
 {
 	const size_t nSize = m_Size + 1;
-	if (nSize >= m_Capacity)
+	if (nSize > m_Capacity)
 	{
 		// Allocate a new layer
 		reallocData((m_Capacity << 1) + 1);
 	}
 
 	// Find first position of empty array (merge layer)
-	const uint32_t m = (1 << getLSBIndex(nSize)) - 1;
+	const uint32_t m = (1 << lsbIndex(nSize)) - 1;
 	const uint32_t mEnd = (m << 1) + 1;
 
 	m_Data[mEnd - 1] = value;
@@ -85,6 +71,43 @@ void COLA::remove(int64_t value)
 
 bool COLA::contains(int64_t value) const
 {
+	// Find index after the last element in the last layer.
+	uint32_t iEnd = nextPO2(m_Size) - 1;
+
+	while (iEnd)
+	{
+		uint32_t iStart = iEnd >> 1;
+
+		// Check if the current layer is non-empty (when
+		// the top set bit of iEnd is also set in m_Size).
+		// E.g. of success (iEnd = 1111):
+		//   0000 1111 & xxxx 1xxx   >    0000 0111
+		// E.g. of failure (iEnd = 1111):
+		//   0000 1111 & xxxx 0xxx   <=   0000 0111
+		if ((iEnd & m_Size) > iStart)
+		{
+			// Binary search range (inclusive)
+			uint32_t i = iStart;
+			uint32_t j = iEnd - 1;
+		
+			// Perform basic binary search
+			while (i <= j)
+			{
+				const uint32_t m = (i + j) >> 1;
+		
+				if (value > m_Data[m])
+					i = m + 1;
+				else if (value < m_Data[m])
+					j = m - 1;
+				else
+					return true;
+			}
+		}
+
+		// Go to previous layer
+		iEnd = iStart;
+	}
+
 	return false;
 }
 
@@ -92,7 +115,7 @@ void COLA::reallocData(size_t capacity)
 {
 	// Allocate and copy memory to new block
 	int64_t* newBlock = new int64_t[capacity];
-	memcpy(newBlock, m_Data, m_Size * sizeof(int64_t));
+	memcpy(newBlock, m_Data, m_Capacity * sizeof(int64_t));
 
 	// Delete and set old block
 	delete[] m_Data;
