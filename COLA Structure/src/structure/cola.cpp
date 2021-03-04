@@ -50,7 +50,7 @@ void COLA::add(int64_t value)
 		// Simple merge sort (ascending order)
 		while (i != iEnd && j != mEnd)
 		{
-			if (m_Data[i] < m_Data[j])
+			if (m_Data[i] <= m_Data[j])
 				m_Data[k++] = m_Data[i++];
 			else
 				m_Data[k++] = m_Data[j++];
