@@ -2,31 +2,43 @@
 
 #include <cstdint>
 
-static uint32_t nextPO2(uint32_t x)
+static size_t nextPO2MinusOne(size_t x)
 {
-	x = x | (x >> 1);
-	x = x | (x >> 2);
-	x = x | (x >> 4);
-	x = x | (x >> 8);
+	// size_t must be at least 16-bit
+	x = x | (x >>  1);
+	x = x | (x >>  2);
+	x = x | (x >>  4);
+	x = x | (x >>  8);
+#if SIZE_MAX >= UINT32_MAX
+	// size_t is at least a 32-bit integer
 	x = x | (x >> 16);
-	return x + 1;
+#endif
+#if SIZE_MAX >= UINT64_MAX
+	// size_t is at least a 64-bit integer
+	x = x | (x >> 32);
+#endif
+	return x;
 }
 
-inline static bool isPO2(uint32_t x)
+static size_t leastZeroBits(size_t x)
+{
+	// Return an integer where exactly all the
+	// least significant zero bits are set.
+	x = x | (x <<  1);
+	x = x | (x <<  2);
+	x = x | (x <<  4);
+	x = x | (x <<  8);
+#if SIZE_MAX >= UINT32_MAX
+	x = x | (x << 16);
+#endif
+#if SIZE_MAX >= UINT64_MAX
+	x = x | (x << 32);
+#endif
+	// Invert x to reveal zero bits
+	return ~x;
+}
+
+inline static bool isPO2(size_t x)
 {
 	return (x & (x - 1)) == 0;
-}
-
-static uint32_t lsbIndex(uint32_t x)
-{
-	// Return the index of the least significant one bit.
-	// See http://graphics.stanford.edu/~seander/bithacks.html
-	static const uint32_t MultiplyDeBruijnBitPosition[32] =
-	{
-	  0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
-	  31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
-	};
-
-	// Find the number of trailing zeros in 32-bit v
-	return MultiplyDeBruijnBitPosition[((uint32_t)((x & (1 + ~x)) * 0x077CB531U)) >> 27];
 }

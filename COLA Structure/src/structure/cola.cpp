@@ -8,7 +8,7 @@ COLA::COLA(size_t initialCapacity) :
 	m_Size(0)
 {
 	// Capacity must be a power of two minus 1 (and greater than zero)
-	m_Capacity = initialCapacity ? static_cast<size_t>(nextPO2(initialCapacity) - 1) : 15;
+	m_Capacity = initialCapacity ? nextPO2MinusOne(initialCapacity) : 15;
 	m_Data = new int64_t[m_Capacity];
 }
 
@@ -30,22 +30,22 @@ void COLA::add(int64_t value)
 		reallocData((m_Capacity << 1) + 1);
 	}
 
-	// Find first position of empty array (merge layer)
-	const uint32_t m = (1 << lsbIndex(nSize)) - 1;
-	const uint32_t mEnd = (m << 1) + 1;
+	// Find first position of empty array (merge-layer)
+	const size_t m = leastZeroBits(nSize);
+	const size_t mEnd = (m << 1) + 1;
 
 	m_Data[mEnd - 1] = value;
 
 	// Iteratively merge arrays
-	uint32_t i = 0;
+	size_t i = 0;
 	while (i != m)
 	{
 		// Index after last element in current layer
-		uint32_t iEnd = (i << 1) + 1;
+		const size_t iEnd = (i << 1) + 1;
 		
 		// Index of first element in merging layer and new index
-		uint32_t j = mEnd - i - 1;
-		uint32_t k = mEnd - iEnd - 1;
+		size_t j = mEnd - i - 1;
+		size_t k = mEnd - iEnd - 1;
 
 		// Simple merge sort (ascending order)
 		while (i != iEnd && j != mEnd)
@@ -72,11 +72,11 @@ void COLA::remove(int64_t value)
 bool COLA::contains(int64_t value) const
 {
 	// Find index after the last element in the last layer.
-	uint32_t iEnd = nextPO2(m_Size) - 1;
+	size_t iEnd = nextPO2MinusOne(m_Size);
 
 	while (iEnd)
 	{
-		uint32_t iStart = iEnd >> 1;
+		const size_t iStart = iEnd >> 1;
 
 		// Check if the current layer is non-empty (when
 		// the top set bit of iEnd is also set in m_Size).
@@ -87,13 +87,13 @@ bool COLA::contains(int64_t value) const
 		if ((iEnd & m_Size) > iStart)
 		{
 			// Binary search range (inclusive)
-			uint32_t i = iStart;
-			uint32_t j = iEnd - 1;
+			size_t i = iStart;
+			size_t j = iEnd - 1;
 		
 			// Perform basic binary search
 			while (i <= j)
 			{
-				const uint32_t m = (i + j) >> 1;
+				const size_t m = (i + j) >> 1;
 		
 				if (value > m_Data[m])
 					i = m + 1;
