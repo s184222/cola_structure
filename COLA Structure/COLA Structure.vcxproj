@@ -140,11 +140,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\structure\cola.cpp" />
+    <ClCompile Include="src\structure\basic_cola.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\structure\math_util.h" />
-    <ClInclude Include="src\structure\cola.h" />
+    <ClInclude Include="src\structure\basic_cola.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

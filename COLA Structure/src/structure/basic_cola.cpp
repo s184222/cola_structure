@@ -1,8 +1,8 @@
-#include "cola.h"
+#include "basic_cola.h"
 
 #include <memory>
 
-COLA::COLA(size_t initialCapacity) :
+BasicCOLA::BasicCOLA(size_t initialCapacity) :
 	m_Data(nullptr),
 	m_Capacity(0),
 	m_Size(0)
@@ -12,7 +12,7 @@ COLA::COLA(size_t initialCapacity) :
 	m_Data = new int64_t[m_Capacity];
 }
 
-COLA::COLA(const COLA& other) :
+BasicCOLA::BasicCOLA(const BasicCOLA& other) :
 	m_Data(new int64_t[other.m_Capacity]),
 	m_Capacity(other.m_Capacity),
 	m_Size(other.m_Size)
@@ -21,7 +21,7 @@ COLA::COLA(const COLA& other) :
 	memcpy(m_Data, other.m_Data, other.m_Capacity * sizeof(int64_t));
 }
 
-void COLA::add(int64_t value)
+void BasicCOLA::add(int64_t value)
 {
 	const size_t nSize = m_Size + 1;
 	if (nSize > m_Capacity)
@@ -64,12 +64,7 @@ void COLA::add(int64_t value)
 	m_Size = nSize;
 }
 
-void COLA::remove(int64_t value)
-{
-
-}
-
-bool COLA::contains(int64_t value) const
+bool BasicCOLA::contains(int64_t value) const
 {
 	// Find index after the last element in the last layer.
 	size_t iEnd = nextPO2MinusOne(m_Size);
@@ -111,7 +106,7 @@ bool COLA::contains(int64_t value) const
 	return false;
 }
 
-void COLA::reallocData(size_t capacity)
+void BasicCOLA::reallocData(size_t capacity)
 {
 	// Allocate and copy memory to new block
 	int64_t* newBlock = new int64_t[capacity];

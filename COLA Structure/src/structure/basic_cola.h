@@ -86,22 +86,20 @@ protected:
 	size_t m_Index;
 };
 
-class COLA
+class BasicCOLA
 {
 public:
 	using ConstIterator = _COLA_ConstIterator;
 public:
-	COLA()
-		: COLA::COLA(15) { }
+	BasicCOLA()
+		: BasicCOLA::BasicCOLA(15) { }
 	
-	COLA(size_t initialCapacity);
+	BasicCOLA(size_t initialCapacity);
 
-	COLA(const COLA& other);
+	BasicCOLA(const BasicCOLA& other);
 
 public:
 	void add(int64_t value);
-
-	void remove(int64_t value);
 
 	bool contains(int64_t value) const;
 
