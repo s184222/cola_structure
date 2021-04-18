@@ -116,6 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>Default</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,10 +140,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\structure\deamortized_cola.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\structure\basic_cola.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\structure\deamortized_cola.h" />
     <ClInclude Include="src\structure\math_util.h" />
     <ClInclude Include="src\structure\basic_cola.h" />
   </ItemGroup>

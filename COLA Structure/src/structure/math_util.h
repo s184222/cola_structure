@@ -38,6 +38,38 @@ static size_t leastZeroBits(size_t x)
 	return ~x;
 }
 
+static uint8_t popcount(size_t x)
+{
+	// Runs in log(x). Alternatively switch to
+	// constant time algorithm.
+	uint8_t count = 0;
+	while (x)
+	{
+		count += x & 0x1;
+		x >>= 1;
+	}
+	return count;
+}
+
+template <typename T>
+static bool binarySearch(T value, T* data, size_t start, size_t end)
+{
+	// Perform basic binary search
+	while (start < end)
+	{
+		const size_t m = (start + end) >> 1;
+
+		if (value > data[m])
+			start = m + 1;
+		else if (value < data[m])
+			end = m;
+		else
+			return true;
+	}
+
+	return false;
+}
+
 inline static bool isPO2(size_t x)
 {
 	return (x & (x - 1)) == 0;

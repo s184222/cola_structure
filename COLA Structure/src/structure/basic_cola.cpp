@@ -1,6 +1,7 @@
 #include "basic_cola.h"
 
 #include <memory>
+#include <algorithm>
 
 BasicCOLA::BasicCOLA(size_t initialCapacity) :
 	m_Data(nullptr),
@@ -8,7 +9,7 @@ BasicCOLA::BasicCOLA(size_t initialCapacity) :
 	m_Size(0)
 {
 	// Capacity must be a power of two minus 1 (and greater than zero)
-	m_Capacity = initialCapacity ? nextPO2MinusOne(initialCapacity) : 15;
+	m_Capacity = std::max(static_cast<size_t>(15), nextPO2MinusOne(initialCapacity));
 	m_Data = new int64_t[m_Capacity];
 }
 
@@ -81,22 +82,9 @@ bool BasicCOLA::contains(int64_t value) const
 		//   0000 1111 & xxxx 0xxx   <=   0000 0111
 		if ((iEnd & m_Size) > iStart)
 		{
-			// Binary search range (inclusive)
-			size_t i = iStart;
-			size_t j = iEnd - 1;
-		
-			// Perform basic binary search
-			while (i <= j)
-			{
-				const size_t m = (i + j) >> 1;
-		
-				if (value > m_Data[m])
-					i = m + 1;
-				else if (value < m_Data[m])
-					j = m - 1;
-				else
-					return true;
-			}
+			// Perform basic binary search in range (inclusive)
+			if (binarySearch(value, m_Data, iStart, iEnd))
+				return true;
 		}
 
 		// Go to previous layer
@@ -110,7 +98,8 @@ void BasicCOLA::reallocData(size_t capacity)
 {
 	// Allocate and copy memory to new block
 	int64_t* newBlock = new int64_t[capacity];
-	memcpy(newBlock, m_Data, m_Capacity * sizeof(int64_t));
+	const size_t c = (capacity > m_Capacity) ? m_Capacity : capacity;
+	memcpy(newBlock, m_Data, c * sizeof(int64_t));
 
 	// Delete and set old block
 	delete[] m_Data;

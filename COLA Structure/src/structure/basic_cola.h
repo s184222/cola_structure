@@ -6,18 +6,18 @@
 
 #include <iostream>
 
-class _COLA_ConstIterator
+class _BasicCOLA_ConstIterator
 {
 public:
 	using PointerType = const int64_t*;
 	using ReferenceType = const int64_t&;
 public:
-	_COLA_ConstIterator(PointerType data, size_t size, size_t index)
-		: m_Data(data), 
-		  m_Size(size),
-		  m_Index(index) { }
+	_BasicCOLA_ConstIterator(const PointerType data, size_t size, size_t index) :
+		m_Data(data), 
+		m_Size(size),
+		m_Index(index) { }
 
-	_COLA_ConstIterator& operator++()
+	_BasicCOLA_ConstIterator& operator++()
 	{
 		m_Index++;
 
@@ -32,14 +32,14 @@ public:
 		return *this;
 	}
 
-	_COLA_ConstIterator operator++(int)
+	_BasicCOLA_ConstIterator operator++(int)
 	{
-		_COLA_ConstIterator itr = *this;
+		_BasicCOLA_ConstIterator itr = *this;
 		++(*this);
 		return itr;
 	}
 
-	_COLA_ConstIterator& operator--()
+	_BasicCOLA_ConstIterator& operator--()
 	{
 		// Check if we are at the beginning of a layer
 		if (isPO2(m_Index + 1))
@@ -53,9 +53,9 @@ public:
 		return *this;
 	}
 
-	_COLA_ConstIterator operator--(int)
+	_BasicCOLA_ConstIterator operator--(int)
 	{
-		_COLA_ConstIterator itr = *this;
+		_BasicCOLA_ConstIterator itr = *this;
 		--(*this);
 		return itr;
 	}
@@ -70,12 +70,12 @@ public:
 		return m_Data[m_Index];
 	}
 
-	bool operator==(const _COLA_ConstIterator& other) const
+	bool operator==(const _BasicCOLA_ConstIterator& other) const
 	{
 		return (m_Data == other.m_Data && m_Index == other.m_Index);
 	}
 
-	bool operator!=(const _COLA_ConstIterator& other) const
+	bool operator!=(const _BasicCOLA_ConstIterator& other) const
 	{
 		return !(*this == other);
 	}
@@ -89,10 +89,10 @@ protected:
 class BasicCOLA
 {
 public:
-	using ConstIterator = _COLA_ConstIterator;
+	using ConstIterator = _BasicCOLA_ConstIterator;
 public:
-	BasicCOLA()
-		: BasicCOLA::BasicCOLA(15) { }
+	BasicCOLA() :
+		BasicCOLA::BasicCOLA(15) { }
 	
 	BasicCOLA(size_t initialCapacity);
 
