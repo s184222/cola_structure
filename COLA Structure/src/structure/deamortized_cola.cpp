@@ -104,7 +104,7 @@ void DeamortizedCOLA::mergeLayers(uint_fast16_t m)
 			Layer& srcLayer = m_Layers[l];
 			Layer& dstLayer = m_Layers[l + 1];
 			
-			// Retreive indices for merging
+			// Retrieve indices for merging
 			size_t& i = srcLayer.m_MergeLeftIndex;
 			size_t& j = srcLayer.m_MergeRightIndex;
 			size_t& k = srcLayer.m_MergeDstIndex;
@@ -203,9 +203,9 @@ size_t DeamortizedCOLA::capacity() const
 {
 	// The actual capacity of the layers can be calculated as:
 	//   Layers    0   1   2   ...   l
-	//   Capacity  2 + 4 + 8 + ... + 2^(l + 1) = 2^(l + 2)
+	//   Capacity  2 + 4 + 8 + ... + 2^(l + 1) = 2^(l + 2) - 2
 	// To allow for merging, the usable capacity should be halved.
-	return static_cast<size_t>(1) << m_LayerCount;
+	return (static_cast<size_t>(1) << m_LayerCount) - 1;
 }
 
 void DeamortizedCOLA::reallocLayers(uint8_t layerCount)
