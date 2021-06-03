@@ -73,7 +73,7 @@ bool AVXBasicCOLA::contains(int64_t value) const
 	// Search in O(1) with Wide Applicability to Arrays of Floating
 	// Point Numbers, by Fabio Cannizzo:
 	//
-	// function LEADBIT(input: z, P, output: i) ; P = 2^floor(log N)
+	// function LEADBIT(input: z, P, output: i) ; P = 2^floor(log2 N)
 	// 	   i <- 0
 	// 	   k <- P
 	// 	   repeat
@@ -85,18 +85,19 @@ bool AVXBasicCOLA::contains(int64_t value) const
 	// 	   until k = 0
 	// end function
 	//
+	// See: https://arxiv.org/pdf/1506.08620.pdf
+	// 
 	// Since the size of the remaining layers are always a power of two,
 	// we have that P = N and we do not need to include padding elements.
-
-	// Nearby layers will be searched in parallel, such that when searching
-	// layer l, we also search l + 1, l + 2, and l + 3 in parallel. This
-	// results in at most three redundant iterations for layer l, but can
-	// run at least four times faster if all layers are full of elements.
 
 	// Compute P = 2^floor(log N) of the last layer.
 	size_t p = (nextPO2MinusOne(m_Size) >> 1) + 1;
 
 #if __AVX__ && __AVX2__
+	// Nearby layers will be searched in parallel, such that when searching
+	// layer l, we also search l + 1, l + 2, and l + 3 in parallel. This
+	// results in at most three redundant iterations for layer l, but can
+	// run at least four times faster if all layers are full of elements.
 	__m256i _i, _k, _p, _r, _z, _x, _mask1, _mask2, _zero, _size;
 
 	// Prepare constants used for checks
