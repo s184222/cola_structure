@@ -186,17 +186,17 @@ bool AVXBasicCOLA::contains(int64_t value) const
 			_k = _mm256_srli_epi64(_k, 1);
 
 			// Compute whether we are done searching and have found i. This is done by
-			// checking if k != 0, in which case we have not found i. Note that since
-			// k = i >> 1(2), we can use the signed > comparison instead.
-			// mask2 = if (k > 0)
-			//       = |if (k[0] > 0)|if (k[1] > 0)|if (k[2] > 0)|if (k[3] > 0)|
-			//       = |11...11|11...11|00...00|00...00|
-			_mask2 = _mm256_cmpgt_epi64(_k, _zero);
+			// checking if k != 0, in which case we have not found i. Note that we do
+			// not have a not equal operation, so use the inverse (k = 0).
+			// mask2 = if (k = 0)
+			//       = |if (k[0] = 0)|if (k[1] = 0)|if (k[2] = 0)|if (k[3] = 0)|
+			//       = |00...00|00...00|11...11|11...11|
+			_mask2 = _mm256_cmpeq_epi64(_k, _zero);
 
 			// Check if we should continue iterating by checking all the masks.
 			// if (k != 0) goto repeat
-			// i.e. if either of the masks are non-zero, go to repeat.
-			if (_mm256_movemask_pd(_mm256_castsi256_pd(_mask2)) != 0b0000)
+			// i.e. if either of the masks are zero, go to repeat.
+			if (_mm256_movemask_pd(_mm256_castsi256_pd(_mask2)) != 0b1111)
 				goto repeat;
 
 			// Load the resulting elements in each of the layers.
