@@ -22,11 +22,16 @@ static void search(const T& cola, int64_t value)
 }
 
 template<typename T>
-static std::chrono::nanoseconds timedSearch(const T& cola, int64_t value)
+static std::chrono::nanoseconds timedSearch(const T& cola, int64_t value, bool expected)
 {
 	const auto start = std::chrono::high_resolution_clock::now();
 	bool result = cola.contains(value);
-	return std::chrono::high_resolution_clock::now() - start;
+	const auto end = std::chrono::high_resolution_clock::now();
+
+	if (result != expected)
+		std::cout << "Error!!" << std::endl;
+
+	return end - start;
 }
 
 template<typename T>
@@ -237,26 +242,23 @@ static void testAVXBasicCola()
 	search(cola, 999);
 	search(cola, 1);
 
-	std::cout << "Add elements 1000 to 999999" << std::endl;
-	for (int i = 1000; i < 1000000; i++)
+	size_t s = nextPO2MinusOne(1000000000);
+	std::cout << "Add elements to a size of " << s << std::endl;
+	while (cola.size() < s)
 	{
-		cola.add(i);
+		cola.add(2 * cola.size());
 	}
 
 	uint64_t n = 0;
 	std::chrono::nanoseconds time(0);
 
-	for (int i = 0; i < 1000000; i++)
+	for (int i = 0; i < 100000; i++)
 	{
-		time += timedSearch(cola, 10000); n++;
-		time += timedSearch(cola, 9999); n++;
-		time += timedSearch(cola, 997); n++;
-		time += timedSearch(cola, 44); n++;
-		time += timedSearch(cola, 5792); n++;
-		time += timedSearch(cola, 18298); n++;
-		time += timedSearch(cola, 999999); n++;
-		time += timedSearch(cola, 1000000); n++;
-		time += timedSearch(cola, 1); n++;
+		time += timedSearch(cola, 0, false); n++;
+		time += timedSearch(cola, 2 * s + 1, false); n++;
+		// does not have uneven elements
+		time += timedSearch(cola, 1000001, false); n++;
+		time += timedSearch(cola, 100003, false); n++;
 	}
 	// Six total searches
 	time /= n;

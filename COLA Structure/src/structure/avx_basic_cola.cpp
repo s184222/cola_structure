@@ -4,6 +4,16 @@
 #include <algorithm>
 #include <immintrin.h>
 
+#ifndef PARALLEL_MERGE
+#define PARALLEL_MERGE 1
+#endif // !PARALLEL_MERGE
+
+#ifndef PARALLEL_SEARCH
+// Note: Parallel search is slower than the sequential search in
+// almost all cases because of excessive and frequent cache misses.
+#define PARALLEL_SEARCH 0
+#endif // !PARALLEL_SEARCH
+
 AVXBasicCOLA::AVXBasicCOLA(size_t initialCapacity) :
 	m_Data(nullptr),
 	m_Capacity(0),
@@ -73,7 +83,7 @@ bool AVXBasicCOLA::contains(int64_t value) const
 	// Search in O(1) with Wide Applicability to Arrays of Floating
 	// Point Numbers, by Fabio Cannizzo:
 	//
-	// function LEADBIT(input: z, P, output: i) ; P = 2^floor(log2 N)
+	// function LEADBIT(input: z, P, output: i) ; P = N > 1 ? 2^floor(log2(N - 1)) : 0
 	// 	   i <- 0
 	// 	   k <- P
 	// 	   repeat
@@ -90,14 +100,13 @@ bool AVXBasicCOLA::contains(int64_t value) const
 	// Since the size of the remaining layers are always a power of two,
 	// we have that P = N and we do not need to include padding elements.
 
-	// Compute P = 2^floor(log N) of the last layer.
+	// Compute P = N ? 2^floor(log2(N - 1)) : 0 of the last layer.
 	size_t p = (nextPO2MinusOne(m_Size) >> 1) + 1;
 
-#if __AVX__ && __AVX2__
+#if PARALLEL_SEARCH
 	// Nearby layers will be searched in parallel, such that when searching
 	// layer l, we also search l + 1, l + 2, and l + 3 in parallel. This
-	// results in at most three redundant iterations for layer l, but can
-	// run at least four times faster if all layers are full of elements.
+	// results in at most three redundant iterations for layer l.
 	__m256i _i, _k, _p, _r, _z, _x, _mask1, _mask2, _zero, _size;
 
 	// Prepare constants used for checks
@@ -224,7 +233,7 @@ bool AVXBasicCOLA::contains(int64_t value) const
 		_p = _mm256_srli_epi64(_p, 4);
 	}
 #else
-	// Sequential implementation for fallback
+	// Sequential fallback implementation
 	for (; p != 0; p >>= 1)
 	{
 		size_t i = p;
