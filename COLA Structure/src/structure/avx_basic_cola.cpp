@@ -232,12 +232,14 @@ bool AVXBasicCOLA::contains(int64_t value) const
 
 		if (m_Size & i)
 		{
-			do {
+			do
+			{
 				size_t r = i | k;
 				if (value >= m_Data[r])
 					i = r;
 				k >>= 1;
-			} while (k != 0);
+			}
+			while (k != 0);
 
 			if (m_Data[i] == value)
 				return true;
