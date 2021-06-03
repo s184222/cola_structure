@@ -178,25 +178,29 @@ bool AVXBasicCOLA::contains(int64_t value) const
 			//   = |0...10000...0|0...01100...0|0...00100...0|0...00011...0|
 			_i = _mm256_or_si256(_i, _r);
 
-			// Compute whether we are done searching and have found i. This is done by
-			// checking if k != 0, in which case we have not found i. Note that since
-			// k = i >> 1, we can use the signed > comparison instead.
-			// mask2 = if (k > 0)
-			//       = |if (k[0] > 0)|if (k[1] > 0)|if (k[2] > 0)|if (k[3] > 0)|
-			//       = |11...11|11...11|00...00|00...00|
-			_mask2 = _mm256_cmpgt_epi64(_k, _zero);
-
 			// Halve the range as seen in the pseudocode
 			// k = k / 2 = k >> 1
 			//   = |0...10000...0|0...01000...0|0...00100...0|0...00010...0| >> 1
 			//   = |0...01000...0|0...00100...0|0...00010...0|0...00001...0|
 			_k = _mm256_srli_epi64(_k, 1);
 
+			// Compute whether we are done searching and have found i. This is done by
+			// checking if k != 0, in which case we have not found i. Note that since
+			// k = i >> 1(2), we can use the signed > comparison instead.
+			// mask2 = if (k > 0)
+			//       = |if (k[0] > 0)|if (k[1] > 0)|if (k[2] > 0)|if (k[3] > 0)|
+			//       = |11...11|11...11|00...00|00...00|
+			_mask2 = _mm256_cmpgt_epi64(_k, _zero);
+
 			// Check if we should continue iterating by checking all the masks.
 			// if (mask2 != 0) goto repeat
 			// i.e. if either of the masks are non-zero, go to repeat.
 			if (_mm256_movemask_pd(_mm256_castsi256_pd(_mask2)) != 0b0000)
 				goto repeat;
+
+			// Load the resulting elements in each of the layers.
+			// x = m_Data[i]
+			_x = _mm256_i64gather_epi64(m_Data, _i, sizeof(int64_t));
 
 			// Searching has finished. Check if found elements are equal.
 			// if (z == x)
