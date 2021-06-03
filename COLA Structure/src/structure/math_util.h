@@ -2,43 +2,86 @@
 
 #include <cstdint>
 
-static size_t nextPO2MinusOne(size_t x)
+template<class T>
+static T nextPO2MinusOne(T x)
 {
-	// size_t must be at least 16-bit
+	// Assume 16-bit
 	x = x | (x >>  1);
 	x = x | (x >>  2);
 	x = x | (x >>  4);
 	x = x | (x >>  8);
-#if SIZE_MAX >= UINT32_MAX
-	// size_t is at least a 32-bit integer
-	x = x | (x >> 16);
-#endif
-#if SIZE_MAX >= UINT64_MAX
-	// size_t is at least a 64-bit integer
-	x = x | (x >> 32);
-#endif
 	return x;
 }
 
-static size_t leastZeroBits(size_t x)
+static uint32_t nextPO2MinusOne(uint32_t x)
+{
+	x = x | (x >> 1);
+	x = x | (x >> 2);
+	x = x | (x >> 4);
+	x = x | (x >> 8);
+	x = x | (x >> 16);
+	return x;
+}
+
+static uint64_t nextPO2MinusOne(uint64_t x)
+{
+	x = x | (x >> 1);
+	x = x | (x >> 2);
+	x = x | (x >> 4);
+	x = x | (x >> 8);
+	x = x | (x >> 16);
+	x = x | (x >> 32);
+	return x;
+}
+
+template<typename T>
+static T leastZeroBits(T x)
 {
 	// Return an integer where exactly all the
 	// least significant zero bits are set.
-	x = x | (x <<  1);
-	x = x | (x <<  2);
-	x = x | (x <<  4);
-	x = x | (x <<  8);
-#if SIZE_MAX >= UINT32_MAX
-	x = x | (x << 16);
-#endif
-#if SIZE_MAX >= UINT64_MAX
-	x = x | (x << 32);
-#endif
+	x = x | (x << 1);
+	x = x | (x << 2);
+	x = x | (x << 4);
+	x = x | (x << 8);
 	// Invert x to reveal zero bits
 	return ~x;
 }
 
-static uint8_t popcount(size_t x)
+static uint32_t leastZeroBits(uint32_t x)
+{
+	x = x | (x << 1);
+	x = x | (x << 2);
+	x = x | (x << 4);
+	x = x | (x << 8);
+	x = x | (x << 16);
+	return ~x;
+}
+
+static uint64_t leastZeroBits(uint64_t x)
+{
+	x = x | (x << 1);
+	x = x | (x << 2);
+	x = x | (x << 4);
+	x = x | (x << 8);
+	x = x | (x << 16);
+	x = x | (x << 32);
+	return ~x;
+}
+
+template<typename T>
+inline static bool isPO2(T x)
+{
+	return (x & (x - 1)) == 0;
+}
+
+template<typename T>
+inline static bool isPO2MinusOne(T x)
+{
+	return (x & (x + 1)) == 0;
+}
+
+template <typename T>
+static uint8_t popcount(T x)
 {
 	static const uint8_t nibblePopcount[16] = {
 		/*0b0000: */ 0, /*0b0001: */ 1, /*0b0010: */ 1, /*0b0011: */ 2,
@@ -74,16 +117,6 @@ static bool binarySearch(T value, T* data, size_t start, size_t end)
 	}
 
 	return false;
-}
-
-inline static bool isPO2(size_t x)
-{
-	return (x & (x - 1)) == 0;
-}
-
-inline static bool isPO2MinusOne(size_t x)
-{
-	return (x & (x + 1)) == 0;
 }
 
 template <typename T>

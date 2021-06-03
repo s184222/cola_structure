@@ -8,21 +8,21 @@
 #include "structure/lookahead_cola.h"
 #include "structure/avx_basic_cola.h"
 
-template<typename T>
-static void insert(T& cola, int64_t value)
+template<typename T, typename V>
+static void insert(T& cola, V value)
 {
 	std::cout << "add(" << value << ")" << std::endl;
 	cola.add(value);
 }
 
-template<typename T>
-static void search(const T& cola, int64_t value)
+template<typename T, typename V>
+static void search(const T& cola, V value)
 {
 	std::cout << "contains(" << value << "): " << cola.contains(value) << std::endl;
 }
 
-template<typename T>
-static std::chrono::nanoseconds timedSearch(const T& cola, int64_t value, bool expected)
+template<typename T, typename V>
+static std::chrono::nanoseconds timedSearch(const T& cola, V value, bool expected)
 {
 	const auto start = std::chrono::high_resolution_clock::now();
 	bool result = cola.contains(value);
@@ -56,7 +56,7 @@ static void testIterator(const T& cola)
 template<typename T>
 static void testContains(const T& cola)
 {
-	for (const int64_t& value : cola)
+	for (const auto& value : cola)
 	{
 		if (!cola.contains(value))
 		{
@@ -242,7 +242,7 @@ static void testAVXBasicCola()
 	search(cola, 999);
 	search(cola, 1);
 
-	size_t s = nextPO2MinusOne(1000000000);
+	uint32_t s = nextPO2MinusOne(1000000000);
 	std::cout << "Add elements to a size of " << s << std::endl;
 	while (cola.size() < s)
 	{

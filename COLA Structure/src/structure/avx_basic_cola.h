@@ -7,11 +7,11 @@
 class _AVXBasicCOLA_ConstIterator
 {
 public:
-	using PointerType = const int64_t*;
-	using ReferenceType = const int64_t&;
+	using PointerType = const int32_t*;
+	using ReferenceType = const int32_t&;
 
 public:
-	_AVXBasicCOLA_ConstIterator(const PointerType data, size_t size, size_t index) :
+	_AVXBasicCOLA_ConstIterator(const PointerType data, uint32_t size, uint32_t index) :
 		m_Data(data),
 		m_Size(size),
 		m_Index(index) { }
@@ -81,8 +81,8 @@ public:
 
 protected:
 	const PointerType m_Data;
-	const size_t m_Size;
-	size_t m_Index;
+	const uint32_t m_Size;
+	uint32_t m_Index;
 };
 
 class AVXBasicCOLA
@@ -94,18 +94,18 @@ public:
 	AVXBasicCOLA() :
 		AVXBasicCOLA::AVXBasicCOLA(16) { }
 
-	AVXBasicCOLA(size_t initialCapacity);
+	AVXBasicCOLA(uint32_t initialCapacity);
 
 	AVXBasicCOLA(const AVXBasicCOLA& other);
 
 public:
-	void add(int64_t value);
+	void add(int32_t value);
 
-	bool contains(int64_t value) const;
+	bool contains(int32_t value) const;
 
-	inline size_t size() const { return m_Size; }
+	inline uint32_t size() const { return m_Size; }
 
-	inline size_t capacity() const { return m_Capacity; }
+	inline uint32_t capacity() const { return m_Capacity; }
 
 	ConstIterator begin() const
 	{
@@ -118,10 +118,10 @@ public:
 	}
 
 private:
-	void reallocData(size_t capacity);
+	void reallocData(uint32_t capacity);
 
 private:
-	int64_t* m_Data;
-	size_t m_Capacity;
-	size_t m_Size;
+	int32_t* m_Data;
+	uint32_t m_Capacity;
+	uint32_t m_Size;
 };
