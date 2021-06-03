@@ -91,7 +91,7 @@ bool AVXBasicCOLA::contains(int64_t value) const
 	// Nearby layers will be searched in parallel, such that when searching
 	// layer l, we also search l + 1, l + 2, and l + 3 in parallel. This
 	// results in at most three redundant iterations for layer l, but can
-	// run up to nearly four times faster if all layers are full of elements.
+	// run at least four times faster if all layers are full of elements.
 
 	// Compute P = 2^floor(log N) of the last layer.
 	size_t p = (nextPO2MinusOne(m_Size) >> 1) + 1;
@@ -157,7 +157,7 @@ bool AVXBasicCOLA::contains(int64_t value) const
 			// mask2 = if (x > z)
 			//       = |if (x[0] > z[0])|if (x[1] > z[1])|if (x[2] > z[2])|if (x[3] > z[3])|
 			//       = |00...00|11...11|00...00|11...11|
-			_mask2 = _mm256_cmpgt_epi64(_z, _x);
+			_mask2 = _mm256_cmpgt_epi64(_x, _z);
 
 			// The next two instructions are for calculating the new index for the
 			// search. This is done by a single OR and AND NOT operation, as follows:
@@ -178,22 +178,22 @@ bool AVXBasicCOLA::contains(int64_t value) const
 			//   = |0...10000...0|0...01100...0|0...00100...0|0...00011...0|
 			_i = _mm256_or_si256(_i, _r);
 
+			// Compute whether we are done searching and have found i. This is done by
+			// checking if k != 0, in which case we have not found i. Note that since
+			// k = i >> 1, we can use the signed > comparison instead.
+			// mask2 = if (k > 0)
+			//       = |if (k[0] > 0)|if (k[1] > 0)|if (k[2] > 0)|if (k[3] > 0)|
+			//       = |11...11|11...11|00...00|00...00|
+			_mask2 = _mm256_cmpgt_epi64(_k, _zero);
+
 			// Halve the range as seen in the pseudocode
 			// k = k / 2 = k >> 1
 			//   = |0...10000...0|0...01000...0|0...00100...0|0...00010...0| >> 1
 			//   = |0...01000...0|0...00100...0|0...00010...0|0...00001...0|
 			_k = _mm256_srli_epi64(_k, 1);
 
-			// Compute whether we are done searching and have found i. This is done by
-			// checking if k != 0, in which case we have not found i. Note that since
-			// k = i >> 1 (2), we can use the signed > comparison instead.
-			// mask2 = if (k > 0)
-			//       = |if (k[0] > 0)|if (k[1] > 0)|if (k[2] > 0)|if (k[3] > 0)|
-			//       = |11...11|11...11|00...00|00...00|
-			_mask2 = _mm256_cmpgt_epi64(_k, _zero);
-
 			// Check if we should continue iterating by checking all the masks.
-			// if (k != 0) goto repeat
+			// if (mask2 != 0) goto repeat
 			// i.e. if either of the masks are non-zero, go to repeat.
 			if (_mm256_movemask_pd(_mm256_castsi256_pd(_mask2)) != 0b0000)
 				goto repeat;

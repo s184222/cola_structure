@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstdint>
+#include <chrono>
 
 #include "structure/basic_cola.h"
 #include "structure/deamortized_cola.h"
@@ -18,6 +19,14 @@ template<typename T>
 static void search(const T& cola, int64_t value)
 {
 	std::cout << "contains(" << value << "): " << cola.contains(value) << std::endl;
+}
+
+template<typename T>
+static std::chrono::nanoseconds timedSearch(const T& cola, int64_t value)
+{
+	const auto start = std::chrono::high_resolution_clock::now();
+	bool result = cola.contains(value);
+	return std::chrono::high_resolution_clock::now() - start;
 }
 
 template<typename T>
@@ -227,6 +236,32 @@ static void testAVXBasicCola()
 	search(cola, 100);
 	search(cola, 999);
 	search(cola, 1);
+
+	std::cout << "Add elements 1000 to 999999" << std::endl;
+	for (int i = 1000; i < 1000000; i++)
+	{
+		cola.add(i);
+	}
+
+	uint64_t n = 0;
+	std::chrono::nanoseconds time(0);
+
+	for (int i = 0; i < 1000000; i++)
+	{
+		time += timedSearch(cola, 10000); n++;
+		time += timedSearch(cola, 9999); n++;
+		time += timedSearch(cola, 997); n++;
+		time += timedSearch(cola, 44); n++;
+		time += timedSearch(cola, 5792); n++;
+		time += timedSearch(cola, 18298); n++;
+		time += timedSearch(cola, 999999); n++;
+		time += timedSearch(cola, 1000000); n++;
+		time += timedSearch(cola, 1); n++;
+	}
+	// Six total searches
+	time /= n;
+
+	std::cout << "Average search time: " << time.count() << std::endl;
 
 	testIterator(cola);
 	testContains(cola);
