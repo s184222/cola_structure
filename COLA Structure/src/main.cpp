@@ -8,15 +8,26 @@
 #include "structure/lookahead_cola.h"
 #include "structure/avx_basic_cola.h"
 
-template<typename T, typename V>
-static void insert(T& cola, V value)
+template<typename T>
+static void insert(T& cola, int64_t value)
 {
 	std::cout << "add(" << value << ")" << std::endl;
 	cola.add(value);
 }
 
-template<typename T, typename V>
-static void search(const T& cola, V value)
+static void insert(AVXBasicCOLA& cola, int32_t value)
+{
+	std::cout << "add(" << value << ")" << std::endl;
+	cola.add(value);
+}
+
+template<typename T>
+static void search(const T& cola, int64_t value)
+{
+	std::cout << "contains(" << value << "): " << cola.contains(value) << std::endl;
+}
+
+static void search(const AVXBasicCOLA& cola, int32_t value)
 {
 	std::cout << "contains(" << value << "): " << cola.contains(value) << std::endl;
 }
@@ -242,12 +253,16 @@ static void testAVXBasicCola()
 	search(cola, 999);
 	search(cola, 1);
 
-	uint32_t s = nextPO2MinusOne(1000000000);
+	uint32_t s = nextPO2MinusOne(100000);
 	std::cout << "Add elements to a size of " << s << std::endl;
+	auto start = std::chrono::high_resolution_clock::now();
 	while (cola.size() < s)
 	{
-		cola.add(2 * cola.size());
+		cola.add(2 * ((cola.size() & 0x1) ? cola.size() : -(int32_t)cola.size()));
 	}
+	auto end = std::chrono::high_resolution_clock::now();
+
+	std::cout << "Time to insert: " << (end - start).count() << std::endl;
 
 	uint64_t n = 0;
 	std::chrono::nanoseconds time(0);

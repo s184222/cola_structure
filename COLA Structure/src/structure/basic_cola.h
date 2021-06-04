@@ -98,6 +98,8 @@ public:
 
 	BasicCOLA(const BasicCOLA& other);
 
+	~BasicCOLA();
+
 public:
 	void add(int64_t value);
 

@@ -22,6 +22,11 @@ BasicCOLA::BasicCOLA(const BasicCOLA& other) :
 	memcpy(m_Data, other.m_Data, other.m_Capacity * sizeof(int64_t));
 }
 
+BasicCOLA::~BasicCOLA()
+{
+	delete[] m_Data;
+}
+
 void BasicCOLA::add(int64_t value)
 {
 	const size_t nSize = m_Size + 1;

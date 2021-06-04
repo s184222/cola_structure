@@ -98,6 +98,8 @@ public:
 
 	AVXBasicCOLA(const AVXBasicCOLA& other);
 
+	~AVXBasicCOLA();
+
 public:
 	void add(int32_t value);
 
@@ -118,9 +120,11 @@ public:
 	}
 
 private:
+	void allocateData(int32_t*& unalignedPtr, int32_t*& alignedPtr, uint32_t capacity) const;
 	void reallocData(uint32_t capacity);
 
 private:
+	int32_t* m_DataUnaligned;
 	int32_t* m_Data;
 	uint32_t m_Capacity;
 	uint32_t m_Size;

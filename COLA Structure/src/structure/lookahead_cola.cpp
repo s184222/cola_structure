@@ -26,6 +26,11 @@ LookaheadCOLA::LookaheadCOLA(const LookaheadCOLA& other) :
 	memcpy(m_Data, other.m_Data, other.m_Capacity * sizeof(Entry));
 }
 
+LookaheadCOLA::~LookaheadCOLA()
+{
+	delete[] m_Data;
+}
+
 void LookaheadCOLA::add(int64_t value)
 {
 	const size_t nSize = m_Size + 1;

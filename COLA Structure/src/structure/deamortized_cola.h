@@ -152,6 +152,8 @@ public:
 
 	DeamortizedCOLA(const DeamortizedCOLA& other);
 
+	~DeamortizedCOLA();
+
 public:
 	void add(int64_t value);
 

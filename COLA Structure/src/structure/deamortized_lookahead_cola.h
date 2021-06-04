@@ -33,6 +33,8 @@ public:
 
 	DeamortizedLookaheadCOLA(const DeamortizedLookaheadCOLA& other);
 
+	~DeamortizedLookaheadCOLA();
+
 public:
 	void add(int64_t value);
 

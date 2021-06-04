@@ -132,6 +132,8 @@ public:
 
 	LookaheadCOLA(const LookaheadCOLA& other);
 
+	~LookaheadCOLA();
+
 public:
 	void add(int64_t value);
 

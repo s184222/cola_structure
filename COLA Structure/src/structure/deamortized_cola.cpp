@@ -50,6 +50,13 @@ DeamortizedCOLA::DeamortizedCOLA(const DeamortizedCOLA& other) :
 	}
 }
 
+DeamortizedCOLA::~DeamortizedCOLA()
+{
+	for (uint8_t l = 0; l < m_LayerCount; l++)
+		delete[] m_Layers[l].m_Data;
+	delete[] m_Layers;
+}
+
 void DeamortizedCOLA::add(int64_t value)
 {
 	const size_t nSize = size() + 1;
