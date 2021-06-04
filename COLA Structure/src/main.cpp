@@ -271,7 +271,7 @@ static void testAVXBasicCola()
 	{
 		time += timedSearch(cola, 0, false); n++;
 		time += timedSearch(cola, 2 * s + 1, false); n++;
-		// does not have uneven elements
+		// Does not have uneven elements
 		time += timedSearch(cola, 1000001, false); n++;
 		time += timedSearch(cola, 100003, false); n++;
 	}
