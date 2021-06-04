@@ -77,7 +77,7 @@ static inline __m256i load8x32i(const int32_t* src)
 static inline void store8x32i(int32_t* dst, __m256i src)
 {
 #if MERGE_UNSAFE_CAST
-	*((__m256i*)dst) = src;
+	* ((__m256i*)dst) = src;
 #else
 	_mm256_maskstore_epi32(dst, _loadMask, src);
 #endif
@@ -94,42 +94,43 @@ static inline void bitonicMerge(__m256i& _a, __m256i& _b)
 	// Perform a standard branchless bitonic merge on the two 8-vectors
 	// using a simple merge network.
 	// See https://xhad1234.github.io/Parallel-Sort-Merge-Join-in-Peloton/
-	
+
 	// Reverse the second 8-vector to obtain a single bitonic sequence
 	_b = reverse(_b);
-	
-	__m256i _mna, _mxa, _mnb, _mxb;
+
+	__m256i _mna, _mxa, _mnb, _mxb, _atmp, _btmp;
 
 	// Phase 1: Perform the first min-max to obtain two bitonic sequences
+	_atmp = _a;
 	_a = _mm256_min_epi32(_a, _b);
-	_b = _mm256_max_epi32(_a, _b);
+	_b = _mm256_max_epi32(_atmp, _b);
 
 	// Phase 2
-	__m256i _a8s = swap128(_a);
-	__m256i _b8s = swap128(_b);
+	_atmp = swap128(_a);
+	_btmp = swap128(_b);
 
-	minmax(_a, _a8s, _mna, _mxa);
-	minmax(_b, _b8s, _mnb, _mxb);
+	minmax(_a, _atmp, _mna, _mxa);
+	minmax(_b, _btmp, _mnb, _mxb);
 
-	__m256i _a4 = _mm256_blend_epi32(_mna, _mxa, 0b11110000);
-	__m256i _b4 = _mm256_blend_epi32(_mnb, _mxb, 0b11110000);
+	_a = _mm256_blend_epi32(_mna, _mxa, 0b11110000);
+	_b = _mm256_blend_epi32(_mnb, _mxb, 0b11110000);
 
 	// Phase 3
-	__m256i _a4s = _mm256_shuffle_epi32(_a4, 0b01001110);
-	__m256i _b4s = _mm256_shuffle_epi32(_b4, 0b01001110);
+	_atmp = _mm256_shuffle_epi32(_a, 0b01001110);
+	_btmp = _mm256_shuffle_epi32(_b, 0b01001110);
 
-	minmax(_a4, _a4s, _mna, _mxa);
-	minmax(_b4, _b4s, _mnb, _mxb);
+	minmax(_a, _atmp, _mna, _mxa);
+	minmax(_b, _btmp, _mnb, _mxb);
 
-	__m256i _a2 = _mm256_unpacklo_epi64(_mna, _mxa);
-	__m256i _b2 = _mm256_unpacklo_epi64(_mnb, _mxb);
+	_a = _mm256_unpacklo_epi64(_mna, _mxa);
+	_b = _mm256_unpacklo_epi64(_mnb, _mxb);
 
 	// Phase 4
-	__m256i _a2s = _mm256_shuffle_epi32(_a2, 0b10110001);
-	__m256i _b2s = _mm256_shuffle_epi32(_a2, 0b10110001);
+	_atmp = _mm256_shuffle_epi32(_a, 0b10110001);
+	_btmp = _mm256_shuffle_epi32(_b, 0b10110001);
 
-	minmax(_a2, _a2s, _mna, _mxa);
-	minmax(_b2, _b2s, _mnb, _mxb);
+	minmax(_a, _atmp, _mna, _mxa);
+	minmax(_b, _btmp, _mnb, _mxb);
 
 	_a = _mm256_blend_epi32(_mna, _mxa, 0b10101010);
 	_b = _mm256_blend_epi32(_mnb, _mxb, 0b10101010);
@@ -340,8 +341,8 @@ bool AVXBasicCOLA::contains(int32_t value) const
 	// Prepare a vector with search value
 	_z = _mm256_set1_epi32(value);
 	// Prepare end of the first layers to be searched
-	_p = _mm256_set_epi32(p     , p >> 1, p >> 2, p >> 3,
-	                      p >> 4, p >> 5, p >> 6, p >> 7);
+	_p = _mm256_set_epi32(p, p >> 1, p >> 2, p >> 3,
+		p >> 4, p >> 5, p >> 6, p >> 7);
 
 	// Comments for 4 element vectors (we now have 8).
 	for (; p != 0; p >>= 8)
@@ -352,7 +353,7 @@ bool AVXBasicCOLA::contains(int32_t value) const
 		//         |0...1110...010|0...1110...010|0...1110...010|0...1110...010|
 		//       = |0...1000...000|0...0100...000|0...0010...000|0...0000...000|
 		_mask1 = _mm256_and_si256(_p, _size);
-		
+
 		// Compute masks for layers that are empty in the current block.
 		// mask1 = if (mask1 == 0)
 		//       = |if (mask[0] == 0)|if (mask[1] == 0)|if (mask[2] == 0)|if (mask[3] == 0)|
@@ -457,7 +458,7 @@ bool AVXBasicCOLA::contains(int32_t value) const
 			// Mask result with empty masks, to ensure we do not get false positives.
 			// mask2 = (NOT mask1) AND mask2
 			_mask2 = _mm256_andnot_si256(_mask1, _mask2);
-			
+
 			// If either of the masks are all ones, we have found the element.
 			// if (z == x && (size & p) != 0) return true
 			if (_mm256_movemask_ps(_mm256_castsi256_ps(_mask2)) != 0b00000000)
