@@ -89,7 +89,8 @@ static inline void minmax(__m256i& _a, __m256i& _b, __m256i& _mn, __m256i& _mx)
 	_mx = _mm256_max_epi32(_a, _b);
 }
 
-static inline void bitonicMerge(__m256i& _a, __m256i& _b)
+/*
+static inline void bitonicMerge8x8(__m256i& _a, __m256i& _b)
 {
 	// Perform a standard branchless bitonic merge on the two 8-vectors
 	// using a simple merge network.
@@ -134,6 +135,49 @@ static inline void bitonicMerge(__m256i& _a, __m256i& _b)
 
 	_a = _mm256_blend_epi32(_mna, _mxa, 0b10101010);
 	_b = _mm256_blend_epi32(_mnb, _mxb, 0b10101010);
+}
+*/
+static inline void bitonicMerge8x8(__m256i& _a, __m256i& _b)
+{
+	// Perform a standard branchless bitonic merge on the two 8-vectors using
+	// a simple merge network. Optimized version of the network that can be
+	// found in https://xhad1234.github.io/Parallel-Sort-Merge-Join-in-Peloton/
+
+	__m256i _atmp, _btmp;
+	
+	// Reverse the second 8-vector to obtain a single bitonic sequence
+	_btmp = reverse(_b);
+
+	// Phase 1: Perform 8x8 comparisons yielding two bitonic sequences.
+	_b = _mm256_max_epi32(_a, _btmp);
+	_a = _mm256_min_epi32(_a, _btmp);
+
+	// Phase 2: Perform 4x4 comparisons yielding four bitonic sequences.
+	_atmp = _mm256_blend_epi32(_a, _b, 0b11110000);
+	_btmp = _mm256_blend_epi32(_a, _b, 0b00001111);
+
+	_btmp = reverse(_btmp);
+
+	_a = _mm256_min_epi32(_atmp, _btmp);
+	_b = _mm256_max_epi32(_atmp, _btmp);
+
+	// Phase 3: Perform 2x2 comparisons to yield eight bitonic sequences
+	_atmp = _mm256_blend_epi32(_a, _b, 0b11001100);
+	_btmp = _mm256_blend_epi32(_a, _b, 0b00110011);
+
+	_btmp = _mm256_shuffle_epi32(_btmp, 0b00011011);
+
+	_a = _mm256_min_epi32(_atmp, _btmp);
+	_b = _mm256_max_epi32(_atmp, _btmp);
+
+	// Phase 4: Perform the last 1x1 comparisons to yield 16 sorted numbers.
+	_atmp = _mm256_blend_epi32(_a, _b, 0b10101010);
+	_btmp = _mm256_blend_epi32(_a, _b, 0b01010101);
+
+	_btmp = _mm256_shuffle_epi32(_btmp, 0b10110001);
+
+	_a = _mm256_min_epi32(_atmp, _btmp);
+	_b = _mm256_max_epi32(_atmp, _btmp);
 }
 #endif
 
@@ -198,7 +242,7 @@ void AVXBasicCOLA::add(int32_t value)
 		//j += BITONIC_SORT_COUNT;
 
 		// Perform bitonic merge on the two vectors
-		bitonicMerge(_a, _b);
+		bitonicMerge8x8(_a, _b);
 
 		// Store lower half of sorted vectors
 		store8x32i(&m_Data[k], _a);
@@ -225,7 +269,7 @@ void AVXBasicCOLA::add(int32_t value)
 
 			do
 			{
-				bitonicMerge(_a, _b);
+				bitonicMerge8x8(_a, _b);
 
 				// Store lower elements (smallest elements both layers)
 				store8x32i(&m_Data[k], _a);
@@ -244,7 +288,7 @@ void AVXBasicCOLA::add(int32_t value)
 			} while (i != iEnd && j != mEnd);
 
 			// At least one pair is remaining to be merged
-			bitonicMerge(_a, _b);
+			bitonicMerge8x8(_a, _b);
 			store8x32i(&m_Data[k], _a);
 			k += BITONIC_SORT_COUNT;
 
@@ -253,7 +297,7 @@ void AVXBasicCOLA::add(int32_t value)
 			{
 				_a = load8x32i(&m_Data[i]);
 				i += BITONIC_SORT_COUNT;
-				bitonicMerge(_a, _b);
+				bitonicMerge8x8(_a, _b);
 				store8x32i(&m_Data[k], _a);
 				k += BITONIC_SORT_COUNT;
 			}
@@ -263,7 +307,7 @@ void AVXBasicCOLA::add(int32_t value)
 			{
 				_a = load8x32i(&m_Data[j]);
 				j += BITONIC_SORT_COUNT;
-				bitonicMerge(_a, _b);
+				bitonicMerge8x8(_a, _b);
 				store8x32i(&m_Data[k], _a);
 				k += BITONIC_SORT_COUNT;
 			}
