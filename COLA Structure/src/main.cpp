@@ -284,12 +284,33 @@ static void testAVXBasicCola()
 	testContains(cola);
 }
 
+template<typename T>
+void timeInsertSorted(T cola, const uint32_t maxLayers)
+{
+	std::chrono::nanoseconds time(0);
+
+	std::cout << "log2 N, avg. insert time" << std::endl;
+	for (uint32_t l = 0; l < maxLayers; l++)
+	{
+		auto start = std::chrono::high_resolution_clock::now();
+		while ((cola.size() >> l) == 0)
+			cola.add(cola.size());
+		auto end = std::chrono::high_resolution_clock::now();
+
+		time += end - start;
+
+		std::cout << l << ", " << time.count() << std::endl;
+	}
+}
+
 int main()
 {
 	//testBasicCola();
 	//testDeamortizedCola();
 	//testLookaheadCola();
-	testAVXBasicCola();
+	//testAVXBasicCola();
+
+	timeInsertSorted(BasicCOLA(), 20);
 
 	return 0;
 }
