@@ -253,7 +253,7 @@ static void testAVXBasicCola()
 	search(cola, 999);
 	search(cola, 1);
 
-	uint32_t s = nextPO2MinusOne(100000) + 1;
+	uint32_t s = nextPO2MinusOne(1000000000) + 1;
 	std::cout << "Add elements to a size of " << s << std::endl;
 	auto start = std::chrono::high_resolution_clock::now();
 	while (cola.size() < s)
@@ -267,7 +267,7 @@ static void testAVXBasicCola()
 	uint64_t n = 0;
 	std::chrono::nanoseconds time(0);
 
-	for (int i = 0; i < 100000000; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		time += timedSearch(cola, 0, false); n++;
 		time += timedSearch(cola, 2 * s + 1, false); n++;
