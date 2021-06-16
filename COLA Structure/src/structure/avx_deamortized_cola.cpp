@@ -15,6 +15,7 @@
 AVXDeamortizedCOLA::AVXDeamortizedCOLA(uint32_t initialCapacity) :
 	m_LeftFullFlags(0),
 	m_RightFullFlags(0),
+	m_MergeFlags(0),
 
 	m_LayerCount(0),
 	m_Layers(nullptr)
@@ -28,13 +29,14 @@ AVXDeamortizedCOLA::AVXDeamortizedCOLA(uint32_t initialCapacity) :
 	{
 		// Size of each array on layer l is 2^l. Hence, with two
 		// arrays on each layer the size of layer l is 2^(l + 1).
-		m_Layers[l].m_Data = new int32_t[static_cast<uint32_t>(2) << l];
+		allocateData(m_Layers[l].m_DataUnaligned, m_Layers[l].m_Data, static_cast<uint32_t>(2) << l);
 	}
 }
 
 AVXDeamortizedCOLA::AVXDeamortizedCOLA(const AVXDeamortizedCOLA& other) :
 	m_LeftFullFlags(other.m_LeftFullFlags),
 	m_RightFullFlags(other.m_RightFullFlags),
+	m_MergeFlags(other.m_MergeFlags),
 
 	m_LayerCount(other.m_LayerCount),
 	m_Layers(new Layer[other.m_LayerCount])
@@ -47,7 +49,7 @@ AVXDeamortizedCOLA::AVXDeamortizedCOLA(const AVXDeamortizedCOLA& other) :
 
 		// Allocate layer data
 		const uint32_t layerSize = static_cast<uint32_t>(2) << l;
-		dstLayer.m_Data = new int32_t[layerSize];
+		allocateData(m_Layers[l].m_DataUnaligned, m_Layers[l].m_Data, layerSize);
 
 		// Copy layer data
 		memcpy(dstLayer.m_Data, srcLayer.m_Data, layerSize * sizeof(int32_t));
@@ -60,7 +62,7 @@ AVXDeamortizedCOLA::AVXDeamortizedCOLA(const AVXDeamortizedCOLA& other) :
 AVXDeamortizedCOLA::~AVXDeamortizedCOLA()
 {
 	for (uint8_t l = 0; l < m_LayerCount; l++)
-		delete[] m_Layers[l].m_Data;
+		delete[] m_Layers[l].m_DataUnaligned;
 	delete[] m_Layers;
 }
 
@@ -188,20 +190,23 @@ void AVXDeamortizedCOLA::add(int32_t value)
 
 void AVXDeamortizedCOLA::prepareMerge(const uint8_t l)
 {
+	const uint32_t flag = static_cast<uint32_t>(1) << l;
+	m_MergeFlags |= flag;
+
 	Layer& layer = m_Layers[l];
 	layer.m_MergeLeftIndex = 0;
-	layer.m_MergeRightIndex = static_cast<uint32_t>(1) << l;
-	layer.m_MergeDstIndex = m_LeftFullFlags & (layer.m_MergeRightIndex << 1);
+	layer.m_MergeRightIndex = flag;
+	layer.m_MergeDstIndex = m_LeftFullFlags & (flag << 1);
 }
 
 void AVXDeamortizedCOLA::mergeLayers(int_fast16_t m)
 {
 	uint8_t l = 0;
 
-	while (m > 0 && (m_RightFullFlags >> l))
+	while (m > 0 && (m_MergeFlags >> l))
 	{
 		// Check if we are merging current layer
-		if ((m_RightFullFlags >> l) & 0x1)
+		if ((m_MergeFlags >> l) & 0x1)
 		{
 			// Current and next layer
 			Layer& srcLayer = m_Layers[l];
@@ -249,7 +254,7 @@ void AVXDeamortizedCOLA::mergeLayers(int_fast16_t m)
 				// of AVX_BITONIC_SORT_COUNT. Sort using bitonic merge.
 				__m256i _a, _b;
 
-				if (!isPO2(i) || !isPO2(j))
+				if (i != 0 && j != (1 << l))
 				{
 					// We have merged the source layers partially. Load the
 					// temporarily stored vector from destination array.
@@ -356,6 +361,7 @@ void AVXDeamortizedCOLA::mergeLayers(int_fast16_t m)
 				// Remove full and merge flags
 				m_LeftFullFlags &= ~(1 << l);
 				m_RightFullFlags &= ~(1 << l);
+				m_MergeFlags &= ~(1 << l);
 
 				// Set full flags of next layer.
 				if ((k >> l) == 0x2)
@@ -398,7 +404,7 @@ bool AVXDeamortizedCOLA::contains(int32_t value) const
 		if ((m_RightFullFlags >> l) & 0x1)
 		{
 			// Perform simple binary search
-			if (binarySearch(value, m_Layers[l].m_Data, arraySize, arraySize << 1))
+			if (binarySearch(value, m_Layers[l].m_Data, arraySize, static_cast<size_t>(arraySize) << 1))
 				return true;
 		}
 	}
@@ -420,6 +426,19 @@ uint32_t AVXDeamortizedCOLA::capacity() const
 	return (static_cast<uint32_t>(1) << m_LayerCount) - 1;
 }
 
+void AVXDeamortizedCOLA::allocateData(int32_t*& unalignedPtr, int32_t*& alignedPtr, uint32_t capacity) const
+{
+#if AVX_PARALLEL_MERGE && AVX_MERGE_UNSAFE_CAST
+	// Data must be aligned to 32 bytes (256 bits) when using parallel search. This
+	// will then align elements used for bitonic merges at 32 bytes (256 bits).
+	unalignedPtr = new int32_t[static_cast<size_t>(capacity) + 8];
+	// Ensure that we have an alignment with lower bits as zero.
+	alignedPtr = (int32_t*)(((uintptr_t)unalignedPtr + 31) & ~(uintptr_t)0x1F);
+#else
+	unalignedPtr = alignedPtr = new int32_t[capacity];
+#endif
+}
+
 void AVXDeamortizedCOLA::reallocLayers(uint8_t layerCount)
 {
 	// Allocate and copy layers to new block
@@ -431,7 +450,7 @@ void AVXDeamortizedCOLA::reallocLayers(uint8_t layerCount)
 		if (l < m_LayerCount)
 			newLayers[l] = m_Layers[l];
 		else
-			newLayers[l].m_Data = new int32_t[static_cast<uint32_t>(2) << l];
+			allocateData(newLayers[l].m_DataUnaligned, newLayers[l].m_Data, static_cast<uint32_t>(2) << l);
 	}
 
 	// Delete and set old block

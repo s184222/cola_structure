@@ -501,7 +501,7 @@ int main()
 	//testAVXDeamortizedCola();
 
 	system("PAUSE");
-	timeInsertSorted<AVXDeamortizedCOLA, 28>();
+	timeInsertRandom<AVXDeamortizedCOLA, 30>();
 
 	return 0;
 }

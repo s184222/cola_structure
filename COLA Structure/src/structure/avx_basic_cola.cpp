@@ -499,10 +499,10 @@ bool AVXBasicCOLA::contains(int32_t value) const
 
 void AVXBasicCOLA::allocateData(int32_t*& unalignedPtr, int32_t*& alignedPtr, uint32_t capacity) const
 {
-#if BASIC_PARALLEL_SEARCH && BASIC_MERGE_UNSAFE_CAST
+#if BASIC_PARALLEL_MERGE && BASIC_MERGE_UNSAFE_CAST
 	// Data must be aligned to 32 bytes (256 bits) when using parallel search. This
 	// will then align elements used for bitonic merges at 32 bytes (256 bits).
-	unalignedPtr = new int32_t[static_cast<size_t>(capacity) + 31];
+	unalignedPtr = new int32_t[static_cast<size_t>(capacity) + 8];
 	// Ensure that we have an alignment with lower bits as zero.
 	alignedPtr = (int32_t*)(((uintptr_t)unalignedPtr + 31) & ~(uintptr_t)0x1F);
 #else

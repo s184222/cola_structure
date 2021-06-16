@@ -8,6 +8,7 @@
 struct _AVXDeamortizedCOLA_Layer
 {
 	int32_t* m_Data;
+	int32_t* m_DataUnaligned;
 
 	uint32_t m_MergeLeftIndex;
 	uint32_t m_MergeRightIndex;
@@ -178,11 +179,13 @@ public:
 private:
 	void prepareMerge(const uint8_t l);
 	void mergeLayers(int_fast16_t m);
+	void allocateData(int32_t*& unalignedPtr, int32_t*& alignedPtr, uint32_t capacity) const;
 	void reallocLayers(uint8_t layerCount);
 
 private:
 	uint32_t m_LeftFullFlags;
 	uint32_t m_RightFullFlags;
+	uint32_t m_MergeFlags;
 
 	uint8_t m_LayerCount;
 	Layer* m_Layers;
