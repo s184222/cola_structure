@@ -4,19 +4,19 @@
 #include <algorithm>
 #include <immintrin.h>
 
-#ifndef PARALLEL_MERGE
-#define PARALLEL_MERGE 1
-#endif // !PARALLEL_MERGE
+#ifndef BASIC_PARALLEL_MERGE
+#define BASIC_PARALLEL_MERGE 1
+#endif // !BASIC_PARALLEL_MERGE
 
-#ifndef MERGE_UNSAFE_CAST
-#define MERGE_UNSAFE_CAST 1
-#endif // !MERGE_UNSAFE_CAST
+#ifndef BASIC_MERGE_UNSAFE_CAST
+#define BASIC_MERGE_UNSAFE_CAST 1
+#endif // !BASIC_MERGE_UNSAFE_CAST
 
-#ifndef PARALLEL_SEARCH
+#ifndef BASIC_PARALLEL_SEARCH
 // Note: Parallel search is slower than the sequential search in
 // almost all cases because of excessive and frequent cache misses.
-#define PARALLEL_SEARCH 1
-#endif // !PARALLEL_SEARCH
+#define BASIC_PARALLEL_SEARCH 1
+#endif // !BASIC_PARALLEL_SEARCH
 
 AVXBasicCOLA::AVXBasicCOLA(uint32_t initialCapacity) :
 	m_DataUnaligned(nullptr),
@@ -45,15 +45,15 @@ AVXBasicCOLA::~AVXBasicCOLA()
 	delete[] m_DataUnaligned;
 }
 
-#if PARALLEL_MERGE
+#if BASIC_PARALLEL_MERGE
 /* Helpers for insert operation during merges */
 static const __m256i _reverse_idx = _mm256_set_epi32(0, 1, 2, 3, 4, 5, 6, 7);
 static const __m256i _swap128_idx = _mm256_set_epi32(3, 2, 1, 0, 7, 6, 5, 4);
-#if !MERGE_UNSAFE_CAST
+#if !BASIC_MERGE_UNSAFE_CAST
 static const __m256i _loadMask = _mm256_set_epi32(-1, -1, -1, -1, -1, -1, -1, -1);
 #endif
 
-#define BITONIC_SORT_COUNT 8
+#define BASIC_BITONIC_SORT_COUNT 8
 
 static inline __m256i reverse(__m256i& _value)
 {
@@ -67,7 +67,7 @@ static inline __m256i swap128(__m256i& _value)
 
 static inline __m256i load8x32i(const int32_t* src)
 {
-#if MERGE_UNSAFE_CAST
+#if BASIC_MERGE_UNSAFE_CAST
 	return *((__m256i*)src);
 #else
 	return _mm256_maskload_epi32(src, _loadMask);
@@ -76,7 +76,7 @@ static inline __m256i load8x32i(const int32_t* src)
 
 static inline void store8x32i(int32_t* dst, __m256i src)
 {
-#if MERGE_UNSAFE_CAST
+#if BASIC_MERGE_UNSAFE_CAST
 	* ((__m256i*)dst) = src;
 #else
 	_mm256_maskstore_epi32(dst, _loadMask, src);
@@ -155,9 +155,9 @@ void AVXBasicCOLA::add(int32_t value)
 	// Iteratively merge arrays
 	uint32_t i = 1;
 
-#if PARALLEL_MERGE
+#if BASIC_PARALLEL_MERGE
 	// Merge the first eight elements (three layers) sequentially
-	while (i < BITONIC_SORT_COUNT && i != m)
+	while (i < BASIC_BITONIC_SORT_COUNT && i != m)
 	{
 		// Index after last element in current layer
 		const uint32_t iEnd = i << 1;
@@ -185,8 +185,8 @@ void AVXBasicCOLA::add(int32_t value)
 	{
 		// At this point we know that we can sort the next eight
 		// elements. This can be done with a single bitonic sort.
-		uint32_t j = mEnd - BITONIC_SORT_COUNT;
-		uint32_t k = mEnd - 2 * BITONIC_SORT_COUNT;
+		uint32_t j = mEnd - BASIC_BITONIC_SORT_COUNT;
+		uint32_t k = mEnd - 2 * BASIC_BITONIC_SORT_COUNT;
 
 		__m256i _a, _b;
 
@@ -194,18 +194,18 @@ void AVXBasicCOLA::add(int32_t value)
 		_a = load8x32i(&m_Data[i]);
 		_b = load8x32i(&m_Data[j]);
 
-		i += BITONIC_SORT_COUNT;
-		//j += BITONIC_SORT_COUNT;
+		i += BASIC_BITONIC_SORT_COUNT;
+		//j += BASIC_BITONIC_SORT_COUNT;
 
 		// Perform bitonic merge on the two vectors
 		bitonicMerge8x8(_a, _b);
 
 		// Store lower half of sorted vectors
 		store8x32i(&m_Data[k], _a);
-		k += BITONIC_SORT_COUNT;
+		k += BASIC_BITONIC_SORT_COUNT;
 		// Store higher half of sorted vectors
 		store8x32i(&m_Data[k], _b);
-		//k += BITONIC_SORT_COUNT;
+		//k += BASIC_BITONIC_SORT_COUNT;
 
 		// Sort remaining elements (layers have size 16 * 2^(l - 4))
 		while (i != m)
@@ -220,8 +220,8 @@ void AVXBasicCOLA::add(int32_t value)
 			_a = load8x32i(&m_Data[i]);
 			_b = load8x32i(&m_Data[j]);
 
-			i += BITONIC_SORT_COUNT;
-			j += BITONIC_SORT_COUNT;
+			i += BASIC_BITONIC_SORT_COUNT;
+			j += BASIC_BITONIC_SORT_COUNT;
 
 			do
 			{
@@ -229,48 +229,48 @@ void AVXBasicCOLA::add(int32_t value)
 
 				// Store lower elements (smallest elements both layers)
 				store8x32i(&m_Data[k], _a);
-				k += BITONIC_SORT_COUNT;
+				k += BASIC_BITONIC_SORT_COUNT;
 
 				if (m_Data[i] < m_Data[j])
 				{
 					_a = load8x32i(&m_Data[i]);
-					i += BITONIC_SORT_COUNT;
+					i += BASIC_BITONIC_SORT_COUNT;
 				}
 				else
 				{
 					_a = load8x32i(&m_Data[j]);
-					j += BITONIC_SORT_COUNT;
+					j += BASIC_BITONIC_SORT_COUNT;
 				}
 			} while (i != iEnd && j != mEnd);
 
 			// At least one pair is remaining to be merged
 			bitonicMerge8x8(_a, _b);
 			store8x32i(&m_Data[k], _a);
-			k += BITONIC_SORT_COUNT;
+			k += BASIC_BITONIC_SORT_COUNT;
 
 			// Sort remaining elements from current layer
 			while (i != iEnd)
 			{
 				_a = load8x32i(&m_Data[i]);
-				i += BITONIC_SORT_COUNT;
+				i += BASIC_BITONIC_SORT_COUNT;
 				bitonicMerge8x8(_a, _b);
 				store8x32i(&m_Data[k], _a);
-				k += BITONIC_SORT_COUNT;
+				k += BASIC_BITONIC_SORT_COUNT;
 			}
 
 			// Sort remaining elements from merging layer
 			while (j != mEnd)
 			{
 				_a = load8x32i(&m_Data[j]);
-				j += BITONIC_SORT_COUNT;
+				j += BASIC_BITONIC_SORT_COUNT;
 				bitonicMerge8x8(_a, _b);
 				store8x32i(&m_Data[k], _a);
-				k += BITONIC_SORT_COUNT;
+				k += BASIC_BITONIC_SORT_COUNT;
 			}
 
 			// Store the remaining pair of higher elements.
 			store8x32i(&m_Data[k], _b);
-			//k += BITONIC_SORT_COUNT;
+			//k += BASIC_BITONIC_SORT_COUNT;
 		}
 	}
 #else
@@ -329,7 +329,7 @@ bool AVXBasicCOLA::contains(int32_t value) const
 	// Compute P = N ? 2^floor(log2(N - 1)) : 0 of the last layer.
 	uint32_t p = (nextPO2MinusOne(m_Size) >> 1) + 1;
 
-#if PARALLEL_SEARCH
+#if BASIC_PARALLEL_SEARCH
 	// Nearby layers will be searched in parallel, such that when searching
 	// layer l, we also search l + 1, ..., l + 7 in parallel. This results
 	// in at most seven redundant iterations for layer l.
@@ -499,7 +499,7 @@ bool AVXBasicCOLA::contains(int32_t value) const
 
 void AVXBasicCOLA::allocateData(int32_t*& unalignedPtr, int32_t*& alignedPtr, uint32_t capacity) const
 {
-#if PARALLEL_SEARCH && MERGE_UNSAFE_CAST
+#if BASIC_PARALLEL_SEARCH && BASIC_MERGE_UNSAFE_CAST
 	// Data must be aligned to 32 bytes (256 bits) when using parallel search. This
 	// will then align elements used for bitonic merges at 32 bytes (256 bits).
 	unalignedPtr = new int32_t[static_cast<size_t>(capacity) + 31];
