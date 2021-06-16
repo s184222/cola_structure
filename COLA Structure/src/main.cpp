@@ -8,6 +8,7 @@
 #include "structure/deamortized_cola.h"
 #include "structure/lookahead_cola.h"
 #include "structure/avx_basic_cola.h"
+#include "structure/avx_deamortized_cola.h"
 
 template<typename T>
 static void insert(T& cola, int64_t value)
@@ -22,6 +23,12 @@ static void insert(AVXBasicCOLA& cola, int32_t value)
 	cola.add(value);
 }
 
+static void insert(AVXDeamortizedCOLA& cola, int32_t value)
+{
+	std::cout << "add(" << value << ")" << std::endl;
+	cola.add(value);
+}
+
 template<typename T>
 static void search(const T& cola, int64_t value)
 {
@@ -29,6 +36,11 @@ static void search(const T& cola, int64_t value)
 }
 
 static void search(const AVXBasicCOLA& cola, int32_t value)
+{
+	std::cout << "contains(" << value << "): " << cola.contains(value) << std::endl;
+}
+
+static void search(const AVXDeamortizedCOLA& cola, int32_t value)
 {
 	std::cout << "contains(" << value << "): " << cola.contains(value) << std::endl;
 }
@@ -285,6 +297,69 @@ static void testAVXBasicCola()
 	testContains(cola);
 }
 
+static void testAVXDeamortizedCola()
+{
+	AVXDeamortizedCOLA cola;
+
+	insert(cola, 1);
+	insert(cola, 2);
+	insert(cola, 6);
+	insert(cola, 4);
+	insert(cola, 3);
+
+	search(cola, 1);
+	search(cola, 5);
+	search(cola, 10);
+	insert(cola, 10);
+	search(cola, 10);
+
+	search(cola, 1337);
+	insert(cola, 1337);
+	search(cola, 1337);
+
+	std::cout << "Add elements 10 to 999" << std::endl;
+	for (int i = 10; i < 1000; i++)
+	{
+		cola.add(i);
+		testIterator(cola);
+		testContains(cola);
+	}
+
+	search(cola, 100);
+	search(cola, 999);
+	search(cola, 1);
+
+	uint32_t s = nextPO2MinusOne(10000) + 1;
+	std::cout << "Add elements to a size of " << s << std::endl;
+	auto start = std::chrono::high_resolution_clock::now();
+	while (cola.size() < s)
+	{
+		cola.add(2 * ((cola.size() & 0x1) ? cola.size() : -(int32_t)cola.size()));
+	}
+	auto end = std::chrono::high_resolution_clock::now();
+
+	std::cout << "Time to insert: " << (end - start).count() << std::endl;
+
+	uint64_t n = 0;
+	std::chrono::nanoseconds time(0);
+
+	for (int i = 0; i < 1; i++)
+	{
+		time += timedSearch(cola, 0, false); n++;
+		time += timedSearch(cola, 2 * s + 1, false); n++;
+		// Does not have uneven elements
+		time += timedSearch(cola, 1000001, false); n++;
+		time += timedSearch(cola, 100003, false); n++;
+	}
+	// Six total searches
+	time /= n;
+
+	std::cout << "Average search time: " << time.count() << std::endl;
+
+	testIterator(cola);
+	testContains(cola);
+}
+
 template<typename T, uint32_t MAX_LAYERS>
 void timeInsertSorted()
 {
@@ -423,9 +498,10 @@ int main()
 	//testDeamortizedCola();
 	//testLookaheadCola();
 	//testAVXBasicCola();
+	//testAVXDeamortizedCola();
 
 	system("PAUSE");
-	timeSearchRandom<BasicCOLA, 31>();
+	timeInsertSorted<AVXDeamortizedCOLA, 28>();
 
 	return 0;
 }
