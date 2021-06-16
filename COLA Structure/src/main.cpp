@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <chrono>
+#include <random>
 
 #include "structure/basic_cola.h"
 #include "structure/deamortized_cola.h"
@@ -284,23 +285,136 @@ static void testAVXBasicCola()
 	testContains(cola);
 }
 
-template<typename T>
-void timeInsertSorted(T cola, const uint32_t maxLayers)
+template<typename T, uint32_t MAX_LAYERS>
+void timeInsertSorted()
 {
-	std::chrono::nanoseconds time(0);
+	T cola;
+
+	auto start = std::chrono::high_resolution_clock::now();
+	std::chrono::nanoseconds times[MAX_LAYERS];
+
+	for (uint32_t l = 0; l < MAX_LAYERS; l++)
+	{
+		uint32_t s = nextPO2MinusOne(cola.size()) + 1;
+		while (cola.size() < s)
+			cola.add(cola.size());
+
+		auto end = std::chrono::high_resolution_clock::now();
+		times[l] = end - start;
+	}
 
 	std::cout << "log2 N, avg. insert time" << std::endl;
-	for (uint32_t l = 0; l < maxLayers; l++)
+	for (uint32_t l = 0; l < MAX_LAYERS; l++)
+		std::cout << times[l].count() << std::endl;
+
+	std::cout << "Size: " << cola.size() << std::endl;
+
+	// Search for something at the end to ensure that the compiler
+	// does not unwantingly optimise code away.
+	std::cout << cola.contains(16) << std::endl;
+}
+
+template<typename T, uint32_t MAX_LAYERS>
+void timeInsertRandom()
+{
+	std::default_random_engine eng(812938729);
+	std::uniform_int_distribution<uint32_t> dist;
+
+	T cola;
+
+	auto start = std::chrono::high_resolution_clock::now();
+	std::chrono::nanoseconds times[MAX_LAYERS];
+
+	for (uint32_t l = 0; l < MAX_LAYERS; l++)
 	{
-		auto start = std::chrono::high_resolution_clock::now();
-		while ((cola.size() >> l) == 0)
-			cola.add(cola.size());
+		uint32_t s = nextPO2MinusOne(cola.size()) + 1;
+		while (cola.size() < s)
+			cola.add(static_cast<int32_t>(dist(eng)));
+
 		auto end = std::chrono::high_resolution_clock::now();
-
-		time += end - start;
-
-		std::cout << l << ", " << time.count() << std::endl;
+		times[l] = end - start;
 	}
+
+	std::cout << "log2 N, avg. insert time" << std::endl;
+	for (uint32_t l = 0; l < MAX_LAYERS; l++)
+		std::cout << times[l].count() << std::endl;
+
+	std::cout << "Size: " << cola.size() << std::endl;
+
+	// Search for something at the end to ensure that the compiler
+	// does not unwantingly optimise code away.
+	std::cout << cola.contains(16) << std::endl;
+}
+
+template<typename T, uint32_t MAX_LAYERS>
+void timeSearchRandom()
+{
+	std::default_random_engine eng(812938729);
+	std::uniform_int_distribution<uint32_t> dist;
+
+	T cola;
+
+	std::chrono::nanoseconds times[MAX_LAYERS];
+
+	size_t cntr = 0;
+	for (uint32_t l = 1; l < MAX_LAYERS; l++)
+	{
+		uint32_t s = (1 << l) - 1;
+		while (cola.size() < s)
+			cola.add(static_cast<int32_t>(dist(eng)));
+		
+		auto start = std::chrono::high_resolution_clock::now();
+		for (uint32_t i = 0; i < 10000; i++) {
+			if (cola.contains(static_cast<int32_t>(dist(eng))))
+				cntr++;
+		}
+		auto end = std::chrono::high_resolution_clock::now();
+		times[l] = end - start;
+	}
+
+	std::cout << "log2(N + 1), avg. search time" << std::endl;
+	for (uint32_t l = 1; l < MAX_LAYERS; l++)
+		std::cout << times[l].count() << std::endl;
+
+	std::cout << "Size: " << cola.size() << std::endl;
+
+	// Print cntr at the end to ensure that the compiler
+	// does not unwantingly optimise code away.
+	std::cout << cntr << std::endl;
+}
+
+template<typename T, uint32_t MAX_LAYERS>
+void timeSearchContained()
+{
+	T cola;
+
+	std::chrono::nanoseconds times[MAX_LAYERS];
+
+	size_t cntr = 0;
+	for (uint32_t l = 1; l < MAX_LAYERS; l++)
+	{
+		uint32_t s = (1 << l) - 1;
+		while (cola.size() < s)
+			cola.add(cola.size());
+
+		auto start = std::chrono::high_resolution_clock::now();
+		for (uint32_t i = 0; i < 100000; i++) {
+			if (cola.contains(static_cast<uint64_t>(i) * cola.size() / 100000))
+				cntr++;
+		}
+		auto end = std::chrono::high_resolution_clock::now();
+		times[l] = end - start;
+	}
+
+	std::cout << "log2(N + 1), avg. search time" << std::endl;
+	for (uint32_t l = 1; l < MAX_LAYERS; l++)
+		std::cout << times[l].count() << std::endl;
+
+	std::cout << "Size: " << cola.size() << std::endl;
+
+	// Print cntr at the end to ensure that the compiler
+	// does not unwantingly optimise code away.
+	std::cout << cntr << std::endl;
 }
 
 int main()
@@ -310,7 +424,8 @@ int main()
 	//testLookaheadCola();
 	//testAVXBasicCola();
 
-	timeInsertSorted(BasicCOLA(), 20);
+	system("PAUSE");
+	timeSearchRandom<BasicCOLA, 31>();
 
 	return 0;
 }
