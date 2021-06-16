@@ -94,7 +94,7 @@ static uint8_t popcount(T x)
 	uint8_t count = 0;
 	while (x)
 	{
-		count += nibblePopcount[x & 0x1111];
+		count += nibblePopcount[x & 0b1111];
 		x >>= 4;
 	}
 	return count;
